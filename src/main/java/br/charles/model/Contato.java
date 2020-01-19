@@ -2,11 +2,10 @@ package br.charles.model;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.hibernate.annotations.GenericGenerator;
 
 import lombok.Data;
 
@@ -18,8 +17,9 @@ import lombok.Data;
 @Data
 public class Contato {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Id 
+	@GeneratedValue(generator="system-uuid")
+	@GenericGenerator(name="system-uuid", strategy = "uuid")
 	private String idContato;
 
 	@NotNull
