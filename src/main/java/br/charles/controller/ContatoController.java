@@ -38,30 +38,21 @@ public class ContatoController {
 	    @GetMapping()
 	    public Page<Contato> listar(
 	            @RequestParam(
-	                    value = "page",
-	                    required = false,
-	                    defaultValue = "0") int page,
-	            @RequestParam(
 	                    value = "size",
 	                    required = false,
 	                    defaultValue = "10") int size,
 	            @RequestParam(
-	                    value = "sort",
-	                    required = false) String sort,
-	            @RequestParam(
-	                    value = "q",
-	                    required = false) String q
+	            		value = "page",
+	            		required = false,
+	            		defaultValue = "0") int page
 	    ) {
-	        Pageable pageable = new PageableFactory(page, size, sort).getPageable();
+	        Pageable pageable = new PageableFactory(page, size).getPageable();
 
-	        Page<Contato> resultPage;
+	        Page<Contato> resultPage = null;
 
-	        if (q == null) {
+	        if (pageable != null)
 	            resultPage = contatoRepository.findAll(pageable);
-	        } else {
-	            resultPage = contatoRepository.busca(q.toLowerCase(), pageable);
-	        }
-
+	   
 	        return resultPage;
 	    }
 

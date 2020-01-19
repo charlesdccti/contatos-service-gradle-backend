@@ -4,6 +4,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import lombok.Builder;
+import lombok.Data;
+
 /**
  * Fábrica de Pageable para preparar esse objeto para ser repassado ao
  * repositório
@@ -14,8 +17,14 @@ public class PageableFactory {
 
     private final int page;
     private final int size;
-    private final String sort;
+    private String sort;
 
+    
+    public PageableFactory(int page, int size) {
+        this.page = page;
+        this.size = size;
+    }
+    
     public PageableFactory(int page, int size, String sort) {
         this.page = page;
         this.size = size;
@@ -45,5 +54,6 @@ public class PageableFactory {
         }
         return pageable;
     }
+    
 
 }
