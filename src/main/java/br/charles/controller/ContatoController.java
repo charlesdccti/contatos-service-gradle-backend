@@ -1,7 +1,10 @@
 package br.charles.controller;
 
 
+import java.util.Date;
 import java.util.Optional;
+
+import javax.validation.Valid;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +24,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.charles.PageableFactory;
+import br.charles.exception.ContatoNotFoundException;
+import br.charles.exception.ExceptionResponse;
 import br.charles.model.Contato;
 import br.charles.repository.ContatoRepository;
-import br.charles.util.ApiError;
+import br.charles.util.ApiHttpStatus;
 import io.swagger.annotations.ApiOperation;
+import javassist.NotFoundException;
 
 
 
@@ -41,57 +47,43 @@ public class ContatoController {
 
 
 	@GetMapping("/{idContato}")
-	public ResponseEntity<Contato> getContato(@PathVariable(value = "idContato") String idContato) {
-
-		String id = ""+idContato;
-		Optional<Contato> rastreador = contatoRepository.findById(id);
-
+	public ResponseEntity getContato(@PathVariable(value = "idContato") Integer idContato) {
+		
+		Optional<Contato> rastreador = contatoRepository.findById(String.valueOf(idContato));
+		
 		if (!rastreador.isPresent()) {
-			return ApiError.notFound("Contato não encontrado");
+			throw new ContatoNotFoundException("Contato não encontrado para o id = " + idContato);
+			//return ApiError.notFound("Contato não encontrado");
 		}
+		
 		return new ResponseEntity<>(rastreador.get(), HttpStatus.OK);
 	}
 
 
 
 	@PutMapping("/{idContato}")
-	public ResponseEntity updateContato(@PathVariable String idContato, @RequestBody Contato dto) {
+	public ResponseEntity updateContato(@PathVariable(value = "idContato") Integer idContato, @Valid @RequestBody Contato dto) {
 
 		try {
-			Optional<Contato> contatoAtual = contatoRepository.findById(idContato);
+			Optional<Contato> contatoAtual = contatoRepository.findById(String.valueOf(idContato));
 
 			if (!contatoAtual.isPresent()) {
-				return ApiError.notFound("Contato não encontrado");
+				throw new ContatoNotFoundException("Contato não encontrado para o id:" + idContato);
+				//return ApiError.notFound("Contato não encontrado");
 			}
 
-			if (dto.getNome() != null) {
-				if (dto.getNome().length() < 2) {
-					return ApiError.badRequest("Nome do produto inválido");
-				}
-				contatoAtual.get().setNome(dto.getNome());
+			Contato contatoAtualizado = contatoRepository.save(contatoAtual.get());
+
+			if (contatoAtualizado == null) {
+				return ApiHttpStatus.internalServerError("Erro na atualização do contato");
 			}
 
-			if (dto.getValor() != null) {
-				int valor = Integer.parseInt(dto.getValor());
-
-				if (valor <= 0) {
-					return ApiError.badRequest("Valor do produto inválido");
-				}
-				contatoAtual.get().setValor(dto.getValor());
-			}
-
-			Contato atualizado = contatoRepository.save(contatoAtual.get());
-
-			if (atualizado == null) {
-				return ApiError.internalServerError("Erro na atualização do produto");
-			}
-
-			LOGGER.info("Contato foi atualizado com sucesso!!");
-			return new ResponseEntity<>(atualizado, HttpStatus.CREATED);
+			LOGGER.info("Contato "+contatoAtualizado.getNome()+" foi atualizado com sucesso!!");
+			return new ResponseEntity<>(contatoAtualizado, HttpStatus.NO_CONTENT);
 
 		} catch (Exception e) {
 			LOGGER.error("Erro ao atualizar um Contato", e);
-			return ApiError.internalServerError("Erro na atualização do contato");
+			return ApiHttpStatus.internalServerError("Erro na atualização do contato");
 		}
 	}
 
@@ -99,26 +91,30 @@ public class ContatoController {
 
 
 
-	@DeleteMapping("/{idContato}")	@ApiOperation(value = "Apaga um objeto do tipo Contato")
-	public ResponseEntity deleteContato(@PathVariable String idContato) {
+	@DeleteMapping("/{idContato}")	
+	@ApiOperation(value = "Apaga um objeto do tipo Contato")
+	public ResponseEntity<Object> deleteContato(@PathVariable(value = "idContato") Integer idContato) {
 
-		Optional<Contato> contato = contatoRepository.findById(idContato);
+		Optional<Contato> contato = contatoRepository.findById(String.valueOf(idContato));
 
 		if (!contato.isPresent()) {
-			return ApiError.notFound("Contato não encontrado");
+			throw new ContatoNotFoundException("Contato não encontrado para o id:" + idContato);
+			//return ApiError.notFound("Contato não encontrado");
 		} else {
-			contatoRepository.deleteById(idContato);
+			contatoRepository.deleteById(String.valueOf(idContato));
 		}
 
 		LOGGER.info("Contato foi removido com sucesso!!");
-		return new ResponseEntity<>(HttpStatus.OK);
+		return ApiHttpStatus.noContetMessage("Contato foi removido com sucesso!!");
+		//new ExceptionResponse(new Date(), HttpStatus., "Contato foi removido com sucesso!!");
+		//return new ResponseEntity<>(new ExceptionResponse(new Date(),HttpStatus.NO_CONTENT,"Contato foi removido com sucesso!!", "Gloria Deus!!"), HttpStatus.NO_CONTENT);
 	}
 
 
 
 
-	@ApiOperation(value = "Lista os Contatos")
 	@GetMapping("/")
+	@ApiOperation(value = "Lista os Contatos")
 	public Page<Contato> listar(
 			@RequestParam(
 					value = "size",
@@ -142,31 +138,13 @@ public class ContatoController {
 
 
 
-	@ApiOperation(value = "Cria um novo Contato")
 	@PostMapping("/")
-	public ResponseEntity createContato(@RequestBody Contato dto) {
+	@ApiOperation(value = "Cria um novo Contato")
+	public ResponseEntity postContato(@Valid @RequestBody Contato dto) {
 
 		try {
 			Contato contato = new Contato();
-
-			if (dto.getNome() == null || dto.getNome().length() < 2) {
-				return ApiError.badRequest("Informe o nome do contato");
-			}
-
-			if (dto.getCanal() == null || dto.getCanal().length() < 2) {
-				return ApiError.badRequest("Informe o canal do contato");
-			}
-
-			Integer valor = Integer.parseInt(dto.getValor());
-
-			if (valor == null || valor <= 0) {
-				return ApiError.badRequest("Valor do contato inválido");
-			}
-
-			if (dto.getObs() == null || dto.getObs().length() < 2) {
-				return ApiError.badRequest("Informe a observação do contato");
-			}
-			contato.setIdContato(null);
+			contato.setIdContato(dto.getIdContato());
 			contato.setNome(dto.getNome());
 			contato.setCanal(dto.getCanal());
 			contato.setValor(dto.getValor());
@@ -176,7 +154,7 @@ public class ContatoController {
 
 			//Se ocorreu algum erro, retorno esse erro para a API
 			if (novo == null) {
-				return ApiError.badRequest("Ocorreu algum erro na criação do contato");
+				return ApiHttpStatus.badRequest("Ocorreu algum erro na criação do contato");
 			}
 
 			LOGGER.info("Contato foi criado com sucesso!!");
@@ -184,7 +162,7 @@ public class ContatoController {
 			return new ResponseEntity<>(novo, HttpStatus.CREATED);
 		} catch (Exception e) {
 			LOGGER.error("Erro ao criar um contato", e);
-			return ApiError.internalServerError("Ocorreu algum erro na criação do contato");
+			return ApiHttpStatus.internalServerError("Ocorreu algum erro na criação do contato");
 		}
 	}
 
